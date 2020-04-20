@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "server": "node index",
-    "dev": "nodemon index"
+    "dev": "nodemon index",
+    "debug": "node --inspect index.js"
   },
   "keywords": [],
   "author": "",
