@@ -7,6 +7,7 @@ const path = require('path');
 const router = require('./router');
 const handleError = require('./middleware/handleError');
 const logClientInfo = require('./middleware/logClientInfo');
+const sendMail = require('./utils/sendMail.js');
 const app = new Koa();
 
 app.use(bodyParser());
@@ -22,6 +23,11 @@ app
 app.on('error', function (err) {
   console.log('logging error ', err.message);
   console.log(err);
+});
+
+sendMail().catch((error) => {
+  console.log("err===>")
+  console.error(error)
 });
 
 app.listen(4000, () => {
