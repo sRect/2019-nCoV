@@ -26,27 +26,28 @@ const parseHtml = async (scripts) => {
   return global.window;
 }
 
-const readJSON = ({path, key}) => {
+const readJSON = ({ path, key }) => {
   return new Promise((resolve, reject) => {
     try {
+      // 'r' - 打开文件用于读取。如果文件不存在，则出现异常
       fs.open(path, 'r', (err, fd) => {
         if (err) {
           reject(err.message);
           return;
         }
-        if(fd) {
+        if (fd) {
           fs.readFile(fd, 'utf8', (err, data) => {
             if (err) reject(err.message);
             let obj = JSON.parse(data)
             resolve(obj[key]);
           });
         } else {
-          reject();
+          reject(new Error('error'));
         }
       })
-      
+
     } catch (error) {
-      reject(error)
+      reject(error.message)
     }
   })
 }
@@ -64,28 +65,25 @@ const handleRefresh = () => {
       const buffer = Buffer.from(dataStr, 'utf8'); // 创建一个包含string的新Buffer
       const file = path.resolve(__dirname, '../assets/data.json');
 
+      // 'w' - 打开文件用于写入。如果文件不存在则创建文件，如果文件已存在则截断文件
       fs.open(file, 'w', (err, fd) => {
         if (err) {
           console.log("====>err")
           throw err;
         };
-        
+
         // NodeJs以流的形式写入文件 https://blog.csdn.net/weixin_34072458/article/details/92261921
         const writeStream = fs.createWriteStream(file); // 创建写入流
 
         writeStream.write(buffer, 'utf8');
         writeStream.end();
-
         writeStream.on('finish', () => {
-          resolve()
+          console.log("数据源写入成功!!!")
+          resolve();
         });
-
-        writeStream.on('error', (err) => {
-          reject(err.message);
-        });
+        writeStream.on('error', (err) => reject(err.message));
       });
 
-      
     } catch (error) {
       console.log(error);
       reject(error.message);
@@ -107,6 +105,34 @@ const handleRefresh = () => {
   data/getStatisticsService 获取整体统计信息
  */
 
+async function handleGetData({ ctx, path, key }) {
+  const [err, result] = await readJSON({
+    path,
+    key
+  })
+    .then(data => [null, data])
+    .catch(err => [err, null]);
+
+  if (err) { // 文件不存在，刷新数据源
+    const [inerr, data] = await handleRefresh()
+      .then(data => [null, data])
+      .catch(err => [err, null]);
+
+    if (inerr) { // 数据刷新失败
+      ctx.response.body = {
+        code: 201,
+        msg: '数据获取异常'
+      }
+      return;
+    }
+
+    await handleGetData({ ctx, path, key });
+    return;
+  }
+
+  ctx.response.body = result;
+}
+
 router.get('/', async (ctx, next) => {
   ctx.response.type = 'html';
   ctx.response.body = await render(path.resolve(__dirname, '../assets/index.html'));
@@ -117,12 +143,13 @@ router.get('/', async (ctx, next) => {
 router.get('/refresh', async (ctx, next) => {
   const [err, data] = await handleRefresh().then(data => [null, data]).catch(err => [err, null]);
 
-  if(err) {
+  if (err) {
     ctx.response.body = {
       code: 500,
       msg: err || '数据更新失败'
     }
   } else {
+    console.log("数据源更新成功!!!")
     ctx.response.body = {
       code: 200,
       msg: '数据更新成功'
@@ -133,40 +160,23 @@ router.get('/refresh', async (ctx, next) => {
 })
 
 router.get('/api/getAreaStat', async (ctx, next) => {
-  const [err, aAreaStat] = await readJSON({
-    path: path.resolve(__dirname, '../assets/data.json'),
-    key: 'getAreaStat'
-  })
-    .then(data => [null, data])
-    .catch(err => [err, null]);
-  
+  await handleGetData({
+    ctx,
+    next,
+    key: 'getAreaStat',
+    path: path.resolve(__dirname, '../assets/data.json')
+  });
 
-  if(err) { // 文件不存在，刷新数据源
-    const [inerr, data] = await handleRefresh()
-      .then(data => [null, data])
-      .catch(err => [err, null]);
+  await next();
+})
 
-    if (inerr) { // 数据刷新失败
-      ctx.response.body = {
-        code: 201,
-        msg: '数据获取异常'
-      }
-    } else {
-      const [err, data] = await readJSON({
-        path: path.resolve(__dirname, '../assets/data.json'),
-        key: 'getAreaStat'
-      })
-        .then(data => [null, data])
-        .catch(err => [err, null]);
-      
-      ctx.response.body = err ? {
-        code: 201,
-        msg: '数据获取异常'
-      } : data;
-    }
-  } else {
-    ctx.response.body = aAreaStat;
-  }
+router.get('/api/getListByCountryTypeService2true', async (ctx, next) => {
+  await handleGetData({
+    ctx,
+    next,
+    key: 'getListByCountryTypeService2true',
+    path: path.resolve(__dirname, '../assets/data.json')
+  });
 
   await next();
 })
