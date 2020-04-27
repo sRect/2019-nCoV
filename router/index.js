@@ -1,7 +1,7 @@
 const Router = require('koa-router');
 const cheerio = require('cheerio');
 const vm = require('vm');
-const { resolve } = require('path');
+const path = require('path');
 const fs = require('fs');
 const render = require('../utils/render');
 const getData = require('../utils/getData');
@@ -26,23 +26,69 @@ const parseHtml = async (scripts) => {
   return global.window;
 }
 
-
 const readJSON = ({path, key}) => {
   return new Promise((resolve, reject) => {
     try {
-      // 检查当前目录中是否存在该文件。
-      fs.access(path, fs.constants.F_OK, (err) => {
-        if (err) reject(err);
-        fs.readFile(path, 'utf8', (err, data) => {
-          if (err) reject(err);
-          let obj = JSON.parse(data)
-          resolve(obj[key]);
-        });
-      });
+      fs.open(path, 'r', (err, fd) => {
+        if (err) {
+          reject(err.message);
+          return;
+        }
+        if(fd) {
+          fs.readFile(fd, 'utf8', (err, data) => {
+            if (err) reject(err.message);
+            let obj = JSON.parse(data)
+            resolve(obj[key]);
+          });
+        } else {
+          reject();
+        }
+      })
       
     } catch (error) {
-      console.log(error)
       reject(error)
+    }
+  })
+}
+
+const handleRefresh = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const html = await getData(URL);
+      // https://github.com/cheeriojs/cheerio
+      const $ = cheerio.load(html);
+      const scripts = $('body > script');
+      const data = await parseHtml(scripts);
+
+      const dataStr = JSON.stringify(data); // object转为string
+      const buffer = Buffer.from(dataStr, 'utf8'); // 创建一个包含string的新Buffer
+      const file = path.resolve(__dirname, '../assets/data.json');
+
+      fs.open(file, 'w', (err, fd) => {
+        if (err) {
+          console.log("====>err")
+          throw err;
+        };
+        
+        // NodeJs以流的形式写入文件 https://blog.csdn.net/weixin_34072458/article/details/92261921
+        const writeStream = fs.createWriteStream(file); // 创建写入流
+
+        writeStream.write(buffer, 'utf8');
+        writeStream.end();
+
+        writeStream.on('finish', () => {
+          resolve()
+        });
+
+        writeStream.on('error', (err) => {
+          reject(err.message);
+        });
+      });
+
+      
+    } catch (error) {
+      console.log(error);
+      reject(error.message);
     }
   })
 }
@@ -63,45 +109,65 @@ const readJSON = ({path, key}) => {
 
 router.get('/', async (ctx, next) => {
   ctx.response.type = 'html';
-  ctx.response.body = await render(resolve(__dirname, '../assets/index.html'));
+  ctx.response.body = await render(path.resolve(__dirname, '../assets/index.html'));
   await next();
 })
 
 // 更新数据源数据
 router.get('/refresh', async (ctx, next) => {
-  const html = await getData(URL);
-  // https://github.com/cheeriojs/cheerio
-  const $ = cheerio.load(html);
-  let scripts = $('body > script');
+  const [err, data] = await handleRefresh().then(data => [null, data]).catch(err => [err, null]);
 
-  let data = await parseHtml(scripts);
-  await fs.writeFile(resolve(__dirname, '../assets/data.json'), JSON.stringify(data), 'utf8', err => {
-    if (err) {
-      console.log("data 保存失败");
-      ctx.response.body = {
-        code: 500,
-        msg: '数据更新失败'
-      };
-      throw err;
-    };
-    console.log("data 保存成功")
-  })
-
-  ctx.response.body = {
-    code: 200,
-    msg: '数据更新成功'
+  if(err) {
+    ctx.response.body = {
+      code: 500,
+      msg: err || '数据更新失败'
+    }
+  } else {
+    ctx.response.body = {
+      code: 200,
+      msg: '数据更新成功'
+    }
   };
 
   await next();
 })
 
 router.get('/api/getAreaStat', async (ctx, next) => {
-  let aAreaStat = await readJSON({
-    path: resolve(__dirname, '../assets/data.json'),
+  const [err, aAreaStat] = await readJSON({
+    path: path.resolve(__dirname, '../assets/data.json'),
     key: 'getAreaStat'
-  });
+  })
+    .then(data => [null, data])
+    .catch(err => [err, null]);
+  
 
-  ctx.response.body = aAreaStat;
+  if(err) { // 文件不存在，刷新数据源
+    const [inerr, data] = await handleRefresh()
+      .then(data => [null, data])
+      .catch(err => [err, null]);
+
+    if (inerr) { // 数据刷新失败
+      ctx.response.body = {
+        code: 201,
+        msg: '数据获取异常'
+      }
+    } else {
+      const [err, data] = await readJSON({
+        path: path.resolve(__dirname, '../assets/data.json'),
+        key: 'getAreaStat'
+      })
+        .then(data => [null, data])
+        .catch(err => [err, null]);
+      
+      ctx.response.body = err ? {
+        code: 201,
+        msg: '数据获取异常'
+      } : data;
+    }
+  } else {
+    ctx.response.body = aAreaStat;
+  }
+
   await next();
 })
 
