@@ -239,6 +239,7 @@ router.post('/api/getAreaStat/:provice', async (ctx, next) => {
       data: "查询失败"
     }
   } else {
+    console.log(`${provice}数据查询成功`)
     ctx.response.body = {
       code: 200,
       data

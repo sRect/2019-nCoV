@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
   <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.0/jquery.min.js"></script>
-  <script src="https://cdn.bootcdn.net/ajax/libs/layer/1.8.5/layer.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/layer/2.3/layer.js"></script>
   <style>
     .content {
       display: flex;
@@ -60,6 +60,7 @@
     const tbody = document.querySelector("#tbody");
     const listByCountryTbody = document.querySelector("#listByCountryTbody");
     const updateData = document.querySelector("#updateData");
+    let layerIndex= null;
 
     function debounce(fn, wait) {
       let timer = null;
@@ -123,7 +124,7 @@
             <td>${b.confirmedCount}</td>
             <td>${b.deadCount}</td>
             <td>${b.curedCount}</td>
-            <td><button onclick="viewDetail(${b.provinceName})">查看详情</button></td>
+            <td><button onclick="viewDetail('${b.provinceName}')">查看详情</button></td>
             </tr>`;
 
             return str;
@@ -156,10 +157,75 @@
       listByCountryTbody.innerHTML = resultStr;
     }
 
+    function getLayerContent(cities) {
+      return new Promise((resolve, reject) => {
+        let bodyStr = '暂无数据';
+        if(Array.isArray(cities) && cities.length) {
+          bodyStr = cities.reduce((a, b) => {
+            let str = '';
+            str += a;
+            str += `
+              <tr>
+                <td>${b.cityName}</td>
+                <td>${b.currentConfirmedCount}</td>
+                <td>${b.confirmedCount}</td>
+                <td>${b.deadCount}</td>
+                <td>${b.curedCount}</td>
+              </tr>
+            `;
+            return str;
+          }, '')
+        };
+
+        let resultStr = `
+          <div style="padding: 10px">
+            <table>
+              <thead>
+                <tr>
+                  <th>地区</th>
+                  <th>现存确诊</th>
+                  <th>累计确诊</th>
+                  <th>死亡</th>
+                  <th>治愈</th>
+                </tr>  
+              </thead>
+              <tbody>${bodyStr}</tbody>
+            </table>
+          </div>
+        `;
+        resolve(resultStr);
+      })
+    }
+
     function viewDetail(provinceName) {
       findProvice(provinceName)
         .then(res => {
-          console.log(res)
+          console.log(res);
+          layerIndex !== null && layer.close(layerIndex);
+
+          getLayerContent(res.data[0].cities)
+            .then(content => {
+              layerIndex = layer.open({
+                type: 1, // layer类型 0.信息框默认 1.页面层 2.iframe层 3.加载层 4.tips层
+                id: 'detailTable',
+                title: provinceName,
+                area: ['20%', '50%'],
+                offset: 'auto',
+                moveOut: true,
+                shade: 0,
+                closeBtn: 1,
+                btn: '',
+                maxmin: true, // 最大最小化按钮是否显示
+                resize: true, // 是否可以调整大小
+                content: content || "",
+                btnAlign: 'c',
+                cancel: function (index, layero) {
+                  layer.close(index);
+                },
+                success: function () { }
+              })
+            })
+            .catch(err => cosnole.error(err))
         })
         .catch(err => {
           console.log(err)
