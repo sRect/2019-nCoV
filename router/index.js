@@ -3,9 +3,10 @@ const cheerio = require('cheerio');
 const vm = require('vm');
 const path = require('path');
 const fs = require('fs');
+const db = require('../db/index.js');
 const render = require('../utils/render');
 const getData = require('../utils/getData');
-const { URL } = require('../config');
+const { URL, DB_COllECTION_NAME } = require('../config');
 
 const router = new Router();
 
@@ -65,6 +66,39 @@ const handleRefresh = () => {
       const buffer = Buffer.from(dataStr, 'utf8'); // 创建一个包含string的新Buffer
       const file = path.resolve(__dirname, '../assets/data.json');
 
+      await db.remove({
+        collection: DB_COllECTION_NAME.areaStat,
+        query: {},
+        options: {
+          multi: true
+        }
+      })
+        .then(numRemoved => console.log(`${DB_COllECTION_NAME.areaStat}删除数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.areaStat}删除数据库失败`)
+          console.error(err)
+        })
+      
+      await db.insert({
+        collection: DB_COllECTION_NAME.areaStat,
+        data: data.getAreaStat
+      })
+        .then(data => console.log(`${DB_COllECTION_NAME.areaStat}插入数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.areaStat}插入数据库失败`)
+          console.error(err)
+        });
+
+      await db.insert({
+        collection: DB_COllECTION_NAME.timelineService1,
+        data: data.getTimelineService1
+      })
+        .then(data => console.log(`${DB_COllECTION_NAME.timelineService1}插入数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.timelineService1}插入数据库失败`)
+          console.error(err)
+        });
+
       // 'w' - 打开文件用于写入。如果文件不存在则创建文件，如果文件已存在则截断文件
       fs.open(file, 'w', (err, fd) => {
         if (err) {
@@ -78,7 +112,7 @@ const handleRefresh = () => {
         writeStream.write(buffer, 'utf8');
         writeStream.end();
         writeStream.on('finish', () => {
-          console.log("数据源写入成功!!!")
+          console.log("文件：数据源写入成功!!!")
           resolve();
         });
         writeStream.on('error', (err) => reject(err.message));
@@ -178,6 +212,39 @@ router.get('/api/getListByCountryTypeService2true', async (ctx, next) => {
     path: path.resolve(__dirname, '../assets/data.json')
   });
 
+  await next();
+})
+
+router.post('/api/getAreaStat/:provice', async (ctx, next) => {
+  let provice = ctx.params.provice;
+  const reg = new RegExp(provice);
+
+  const [err, data] = await db.find({
+    collection: DB_COllECTION_NAME.areaStat,
+    query: {
+      // $or: [{ provinceName: reg }, { provinceShortName: reg }]
+      provinceName: reg
+    },
+    sortQuery: {},
+    pageNum: 0,
+    pageSize: 10
+  })
+    .then(data => [null, data])
+    .catch(err => [err, null]);
+  
+  if(err) {
+    console.error(err);
+    ctx.response.body = {
+      code: 500,
+      data: "查询失败"
+    }
+  } else {
+    ctx.response.body = {
+      code: 200,
+      data
+    }
+  }
+  
   await next();
 })
 

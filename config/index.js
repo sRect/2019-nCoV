@@ -1,5 +1,10 @@
 const URL = 'https://ncov.dxy.cn/ncovh5/view/pneumonia';
 
+const DB_COllECTION_NAME = {
+  timelineService1: 'timelineService1',
+  areaStat: 'areaStat'
+}
+
 // https://nodemailer.com/about/
 // https://www.jianshu.com/p/f2e75080a5e2
 const transporterConf = {
@@ -23,6 +28,7 @@ const mailOptions = {
 
 module.exports = {
   URL,
+  DB_COllECTION_NAME,
   transporterConf,
   mailOptions
 }

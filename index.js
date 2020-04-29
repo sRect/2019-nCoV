@@ -25,10 +25,10 @@ app.on('error', function (err) {
   console.log(err);
 });
 
-sendMail().catch((error) => {
-  console.log("err===>")
-  console.error(error)
-});
+// sendMail().catch((error) => {
+//   console.log("err===>")
+//   console.error(error)
+// });
 
 app.listen(4000, () => {
   console.log('====your app is running at port 4000=====')
