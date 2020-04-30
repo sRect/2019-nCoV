@@ -72,9 +72,20 @@ const remove = ({ collection, query, options }) => {
   })
 }
 
+// 查询总数count
+const count = ({ collection, query }) => {
+  return new Promise((resolve, reject) => {
+    db[collection].count({ ...query }, (err, count) => {
+      if (err) reject(err);
+      resolve(count);
+    })
+  })
+}
+
 module.exports = {
   insert,
   find,
   update,
-  remove
+  remove,
+  count
 }

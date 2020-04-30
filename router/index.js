@@ -10,6 +10,20 @@ const { URL, DB_COllECTION_NAME, AreaConf } = require('../config');
 
 const router = new Router();
 
+/**
+ * data/getTimelineService 按时间线获取事件
+  data/getStatisticsService 获取整体统计信息
+  data/getAreaStat/:provice 获取指定省份信息，例如：/data/getAreaStat/山东
+  data/getNewest/:lastid 获取最新事件
+  data/getIndexRumorList 最新辟谣
+  data/getIndexRecommendList 最新防护知识
+  data/getWikiList 最新知识百科
+  data/getEntries 诊疗信息
+  data/getListByCountryTypeService1 全国省份级患者分布数据
+  data/getListByCountryTypeService2true 全球海外其他地区患者分布数据
+  data/getStatisticsService 获取整体统计信息
+ */
+
 const parseHtml = async (scripts) => {
   let global = {
     window: {}
@@ -160,20 +174,6 @@ const handleRefresh = () => {
     }
   })
 }
-
-/**
- * data/getTimelineService 按时间线获取事件
-  data/getStatisticsService 获取整体统计信息
-  data/getAreaStat/:provice 获取指定省份信息，例如：/data/getAreaStat/山东
-  data/getNewest/:lastid 获取最新事件
-  data/getIndexRumorList 最新辟谣
-  data/getIndexRecommendList 最新防护知识
-  data/getWikiList 最新知识百科
-  data/getEntries 诊疗信息
-  data/getListByCountryTypeService1 全国省份级患者分布数据
-  data/getListByCountryTypeService2true 全球海外其他地区患者分布数据
-  data/getStatisticsService 获取整体统计信息
- */
 
 async function handleGetData({ ctx, path, key }) {
   const [err, result] = await readJSON({
