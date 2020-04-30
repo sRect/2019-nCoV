@@ -17,7 +17,7 @@
 <body>
   <div id="root">
     <div>
-      <button id="updateData">更新疫情数据</button>
+      <button id="updateData">更新疫情数据,请勿频繁点击</button>
     </div>
     <div class="content">
       <div>
@@ -37,7 +37,28 @@
         </table>
       </div>
       <div>
-        <h3>国际疫情<small>（根据累计确诊排序）</small></h3>
+        <h3>国际疫情<small>（默认根据累计确诊排序）</small></h3>
+        <div>
+          <div>
+            地区：<select name="" id="continentsSelect">
+              <option value="All">全部</option>
+              <option value="Asia">亚洲</option>
+              <option value="Europe">欧洲</option>
+              <option value="Africa">非洲</option>
+              <option value="SouthAmerica">南美洲</option>
+              <option value="NorthAmerica">北美洲</option>
+              <option value="Oceania">大洋洲</option>
+            </select>
+          </div>
+          <div>
+            排序：<button id="deadRateRankBtn" data-type="deadRateRank" onclick="getListByCountryArg('deadRateRank', 'asce')">病死率↑</button> | 
+            <button id="deadRateRankBtn" data-type="deadRateRank" onclick="getListByCountryArg('deadRateRank', 'desc')">病死率↓</button> |
+            <button id="deadCountRankBtn" data-type="deadCountRank" onclick="getListByCountryArg('deadCountRank', 'asce')">累计死亡↑</button> | 
+            <button id="deadCountRankBtn" data-type="deadCountRank" onclick="getListByCountryArg('deadCountRank', 'desc')">累计死亡↓</button> | 
+            <button id="confirmedCountRankBtn" data-type="confirmedCountRank" onclick="getListByCountryArg('confirmedCountRank', 'asce')">累计确诊↑</button> |
+            <button id="confirmedCountRankBtn" data-type="confirmedCountRank" onclick="getListByCountryArg('confirmedCountRank', 'desc')">累计确诊↓</button> |
+          </div>
+        </div>
         <table>
           <thead>
             <tr>
@@ -60,6 +81,10 @@
     const tbody = document.querySelector("#tbody");
     const listByCountryTbody = document.querySelector("#listByCountryTbody");
     const updateData = document.querySelector("#updateData");
+    const continentsSelect = document.querySelector("#continentsSelect");
+    const deadRateRankBtn = document.querySelector("#deadRateRankBtn");
+    const deadCountRankBtn = document.querySelector("#deadCountRankBtn");
+    const confirmedCountRankBtn = document.querySelector("#confirmedCountRankBtn");
     let layerIndex= null;
 
     function debounce(fn, wait) {
@@ -100,9 +125,18 @@
       }
     
     // 获取全球数据
-    const getListByCountryTypeService2true = () => {
+    const getListByCountryTypeService2true = (arg) => {
+      console.log(arg)
       return new Promise((resolve, reject) => {
-        fetch('http://localhost:4000/api/getListByCountryTypeService2true')
+        fetch('http://localhost:4000/api/getListByCountryTypeService2true', {
+          method: "POST",
+          headers: { 
+            'Accept': 'application/json',
+            // 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(arg)
+        })
           .then(res => {
             if (res.status !== 200) reject();
 
@@ -232,10 +266,46 @@
         })
     }
 
+    // 获取全球疫情参数修改
+    function getListByCountryArg(type, value) {
+      // continents, orderQuery, pageNum, pageSize
+      const arg = {
+        continents: "全部",
+        orderQuery: {
+          confirmedCount: -1
+        },
+        pageNum: 0,
+        pageSize: 10 // limit
+      };
+
+      switch(type) {
+        case 'continents':
+          arg['continents'] = value;
+          break;
+        case 'deadRateRank':
+          arg['orderQuery'] = { deadRateRank: value === 'asce' ? 1 : -1};
+          break;
+        case 'deadCountRank':
+          arg['orderQuery'] = { deadCountRank: value === 'asce' ? 1 : -1 };
+          break;
+        case 'confirmedCountRank':
+          arg['orderQuery'] = { confirmedCountRank: value === 'asce' ? 1 : -1 };
+          break;
+        default:
+          break;
+      }
+
+      return arg;
+    }
+
     window.onload = async function() {
       try {
+        const listByCountryArg = getListByCountryArg();
+        
         let areaStatData = await getAreaStat();
-        let listByCountryData = await getListByCountryTypeService2true();
+        let listByCountryData = await getListByCountryTypeService2true({
+          ...listByCountryArg
+        });
         renderAreaStatTable(areaStatData);
         renderListByCountry(listByCountryData);
 

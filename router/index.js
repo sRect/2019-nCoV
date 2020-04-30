@@ -6,7 +6,7 @@ const fs = require('fs');
 const db = require('../db/index.js');
 const render = require('../utils/render');
 const getData = require('../utils/getData');
-const { URL, DB_COllECTION_NAME } = require('../config');
+const { URL, DB_COllECTION_NAME, AreaConf } = require('../config');
 
 const router = new Router();
 
@@ -67,6 +67,29 @@ const handleRefresh = () => {
       const file = path.resolve(__dirname, '../assets/data.json');
 
       await db.remove({
+        collection: DB_COllECTION_NAME.listByCountryTypeService2true,
+        query: {},
+        options: {
+          multi: true
+        }
+      })
+        .then(numRemoved => console.log(`${DB_COllECTION_NAME.listByCountryTypeService2true}删除数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.listByCountryTypeService2true}删除数据库失败`)
+          console.error(err)
+        });
+
+      await db.insert({
+        collection: DB_COllECTION_NAME.listByCountryTypeService2true,
+        data: data.getListByCountryTypeService2true
+      })
+        .then(data => console.log(`${DB_COllECTION_NAME.listByCountryTypeService2true}插入数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.listByCountryTypeService2true}插入数据库失败`)
+          console.error(err)
+        });
+
+      await db.remove({
         collection: DB_COllECTION_NAME.areaStat,
         query: {},
         options: {
@@ -77,7 +100,7 @@ const handleRefresh = () => {
         .catch(err => {
           console.log(`${DB_COllECTION_NAME.areaStat}删除数据库失败`)
           console.error(err)
-        })
+        });
       
       await db.insert({
         collection: DB_COllECTION_NAME.areaStat,
@@ -86,6 +109,19 @@ const handleRefresh = () => {
         .then(data => console.log(`${DB_COllECTION_NAME.areaStat}插入数据库成功`))
         .catch(err => {
           console.log(`${DB_COllECTION_NAME.areaStat}插入数据库失败`)
+          console.error(err)
+        });
+
+      await db.remove({
+        collection: DB_COllECTION_NAME.timelineService1,
+        query: {},
+        options: {
+          multi: true
+        }
+      })
+        .then(numRemoved => console.log(`${DB_COllECTION_NAME.timelineService1}删除数据库成功`))
+        .catch(err => {
+          console.log(`${DB_COllECTION_NAME.timelineService1}删除数据库失败`)
           console.error(err)
         });
 
@@ -194,23 +230,65 @@ router.get('/refresh', async (ctx, next) => {
 })
 
 router.get('/api/getAreaStat', async (ctx, next) => {
-  await handleGetData({
-    ctx,
-    next,
-    key: 'getAreaStat',
-    path: path.resolve(__dirname, '../assets/data.json')
-  });
+  // await handleGetData({
+  //   ctx,
+  //   next,
+  //   key: 'getAreaStat',
+  //   path: path.resolve(__dirname, '../assets/data.json')
+  // });
+  await db.find({
+    collection: DB_COllECTION_NAME.areaStat,
+    query: {},
+    sortQuery: {},
+    pageNum: 0,
+    pageSize: 100 // limit
+  })
+    .then(docs => {
+      ctx.response.body = docs
+    })
+    .catch(err => {
+      console.log(err)
+      ctx.response.body = {
+        code: 500,
+        msg: '数据获取异常'
+      }
+    });
 
   await next();
 })
 
-router.get('/api/getListByCountryTypeService2true', async (ctx, next) => {
-  await handleGetData({
-    ctx,
-    next,
-    key: 'getListByCountryTypeService2true',
-    path: path.resolve(__dirname, '../assets/data.json')
-  });
+router.post('/api/getListByCountryTypeService2true', async (ctx, next) => {
+  const { continents, orderQuery, pageNum, pageSize } = ctx.request.body;
+  const reg = new RegExp(continents);
+
+  // await handleGetData({
+  //   ctx,
+  //   next,
+  //   key: 'getListByCountryTypeService2true',
+  //   path: path.resolve(__dirname, '../assets/data.json')
+  // });
+
+  await db.find({
+    collection: DB_COllECTION_NAME.listByCountryTypeService2true,
+    query: continents === AreaConf.All ? {} : {
+      continents: reg
+    },
+    sortQuery: {
+      ...orderQuery
+    },
+    pageNum: pageNum || 0,
+    pageSize: pageSize || 10 // limit
+  })
+    .then(docs => {
+      ctx.response.body = docs
+    })
+    .catch(err => {
+      console.log(err)
+      ctx.response.body = {
+        code: 500,
+        msg: '数据获取异常'
+      }
+    });
 
   await next();
 })

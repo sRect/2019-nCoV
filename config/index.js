@@ -2,7 +2,18 @@ const URL = 'https://ncov.dxy.cn/ncovh5/view/pneumonia';
 
 const DB_COllECTION_NAME = {
   timelineService1: 'timelineService1',
-  areaStat: 'areaStat'
+  areaStat: 'areaStat',
+  listByCountryTypeService2true: 'listByCountryTypeService2true'
+}
+
+const AreaConf = {
+  All: '全部',
+  Asia: '亚洲',
+  Europe: '欧洲',
+  Africa: '非洲',
+  SouthAmerica: '南美洲',
+  NorthAmerica: '北美洲',
+  Oceania: '大洋洲'
 }
 
 // https://nodemailer.com/about/
@@ -30,5 +41,6 @@ module.exports = {
   URL,
   DB_COllECTION_NAME,
   transporterConf,
-  mailOptions
+  mailOptions,
+  AreaConf
 }

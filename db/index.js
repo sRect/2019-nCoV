@@ -17,6 +17,11 @@ db[DB_COllECTION_NAME.areaStat] = new Datastore({
   autoload: true
 });
 
+db[DB_COllECTION_NAME.listByCountryTypeService2true] = new Datastore({
+  filename: path.resolve(__dirname, `./${DB_COllECTION_NAME.listByCountryTypeService2true}.db`),
+  autoload: true
+})
+
 // 插入数据
 const insert = ({ collection, data }) => {
   return new Promise((resolve, reject) => {
@@ -48,11 +53,11 @@ const find = ({ collection, query = {}, sortQuery = {}, pageNum = 0, pageSize = 
 }
 
 // update
-const update = ({ collection, query, data }) => {
+const update = ({ collection, query, update, options }) => {
   return new Promise((resolve, reject) => {
-    db[collection].update({ ...query }, { ...data }, (err, data) => {
+    db[collection].update({ ...query }, { ...update }, { ...options }, (err, numReplaced) => {
       if (err) reject(err);
-      resolve(data);
+      resolve(numReplaced);
     })
   })
 }
