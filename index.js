@@ -3,6 +3,7 @@
 const Koa = require('koa');
 const static = require('koa-static');
 const bodyParser = require('koa-bodyparser');
+const cors = require('koa2-cors');
 const path = require('path');
 const router = require('./router');
 const handleError = require('./middleware/handleError');
@@ -11,6 +12,7 @@ const sendMail = require('./utils/sendMail.js');
 const app = new Koa();
 
 app.use(bodyParser());
+app.use(cors()); // 允许跨域
 app.use(static(path.resolve(__dirname, './')));
 app.use(handleError);
 app.use(logClientInfo);
