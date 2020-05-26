@@ -276,11 +276,11 @@ router.post('/api/getListByCountryTypeService2true', async (ctx, next) => {
     sortQuery: {
       ...orderQuery
     },
-    pageNum: pageNum || 0,
-    pageSize: pageSize || 10 // limit
+    pageNum: Number.parseInt(pageNum) || 0,
+    pageSize: Number.parseInt(pageSize) || 10 // limit
   })
     .then(docs => {
-      ctx.response.body = docs
+      ctx.response.body = docs;
     })
     .catch(err => {
       console.log(err)
